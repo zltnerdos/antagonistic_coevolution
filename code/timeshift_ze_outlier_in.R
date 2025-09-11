@@ -7,7 +7,7 @@
 librarian::shelf(
   tidyverse, janitor, dplyr, patchwork, GGally, ggpubr, RColorBrewer, cowplot,
   lme4, emmeans, car, rstatix, DHARMa, boot, LaplacesDemon, devtools,
-  BlakeRMills/MoMAColors, outliers, broom.mixed, ggfortify, performance
+  BlakeRMills/MoMAColors, outliers, broom.mixed
 )
 # Set theme for plots
 theme_ze <-  theme_bw()+
@@ -114,10 +114,56 @@ ggplot(timeshift, aes(x = P)) +
   labs(title = "Histogram of P Counts", x = "P Counts", y = "Frequency") +
   theme_minimal()
 
+
+#outlier seems to be VD4PC4, treatment = coculture, V_time = 10 weeks, P_time = 6 weeks
+#create a subset for these conditions
+outlier_condition <- timeshift %>%
+  filter(treatment == 'coculture', V_time == '10 weeks', P_time == '6 weeks')
+#make a plot showing the outlier
+ggplot(timeshift, aes(x = community, y = V)) +
+  geom_point() +
+  labs(x = "all Variovorax replicates", y = "Variovorax count") +
+  theme_minimal()
+
+ggplot(outlier_condition, aes(x = community, y = V)) +
+  geom_point() +
+  labs(x = "replicate", y = "Variovorax count") +
+  theme_minimal()
+
+# Plot 1: All Variovorax replicates
+Sup1 <- ggplot(timeshift, aes(x = community, y = V)) +
+  geom_point(color = "Black", size = 2) +
+  labs(
+    x = "All Variovorax replicates",
+    y = "Variovorax count"
+  ) +
+  theme_minimal(base_size = 12)+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Plot 2: Outlier condition
+Sup2 <- ggplot(outlier_condition, aes(x = community, y = V)) +
+  geom_point(color = "Black", size = 2) +
+  labs(
+    x = "Treatment level replicates",
+    y = "Variovorax count"
+  ) +
+  theme_minimal(base_size = 12)+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+combined <- Sup1 + Sup2 +
+  plot_annotation(
+    tag_levels = "A",   # adds A, B labels automatically
+    theme = theme(
+      plot.title = element_text(size = 12, face = "bold"),
+      plot.subtitle = element_text(size = 12)
+    )
+  )
+
+combined
+
 #grubbs test for outliers in V counts
 grubbs.test(timeshift$V)
-
-# Remove outlier based on visual inspection | NOT REMOVING OUTLIER
+# OUTLIERS ARE NOT REMOVED
 #timeshift <- timeshift %>%
   #filter(!(community == 'VD4PC4'))
 
@@ -231,13 +277,10 @@ summary(prop_pmonoculture) # 6 week P higher proportion
 # Post-hoc comparisons for P proportion in monoculture
 emmeans(prop_pmonoculture, specs = pairwise ~ P_time)
 
-# proportions in coculture | These results are different if we leave 'outlier' in. There is stronger support for interaction between P_time and V_time
-
+# proportions in coculture
 prop_pcoculture <- glmer(cbind(P,V) ~ P_time*V_time+(1|repP) + (1|repV),
                           data = subset(timeshift, treatment %in% c('coculture')),
                           family = binomial)
-
-check_model(prop_pcoculture, check = "outliers")
 
 drop1(prop_pcoculture, test = 'Chisq') # significant interaction
 
@@ -265,7 +308,7 @@ summary(prop_pcommunity)
 emmeans(prop_pcommunity, specs = pairwise ~ P_time | V_time)
 
 # =============================================================================
-# ANALYSIS of P proportion | does coevolution differ between coculture and community? | these results are different if we leave 'outlier' in. There is a 3 way interaction between P_time, V_time and treatment
+# ANALYSIS of P proportion | does coevolution differ between coculture and community?
 # =============================================================================
 
 prop_p.1noa <-  glmer(cbind(P,V) ~ P_time*V_time*treatment+ (1|repP) + (1|repV),
@@ -284,7 +327,17 @@ summary(prop_p.1noa)
 #post-hoc comparisons for P proportion in coculture and community
 coandcom_compare <- emmeans::emmeans(prop_p.1noa, pairwise ~ treatment)
 
-#comparison of P density between coculture and community | outlier in: no treatment effect but instead V_time effect.
+# check optimizers
+noanc <- allFit(prop_p.1noa)
+print(noanc)
+summary(noanc)
+tidy(noanc, conf.int = TRUE) |> 
+  arrange(effect, term, estimate) |> 
+  select(-c(std.error, statistic))
+
+glance(aa) |> select(optimizer, AIC, NLL_rel) |> arrange(NLL_rel)
+
+#comparison of P density between coculture and community
 P2.1cc <- lmer(Plogperml~V_time*P_time*treatment+ (1|repP) + (1|repV),
                data = subset(timeshift, !(treatment %in% c('monoculture','ancestor'))))
                
@@ -304,7 +357,7 @@ summary(P2.1cc)
 plot(simulateResiduals(fittedModel =P2.1cc, plot = F))
 pcount_full<-emmeans(P2.1cc, specs = pairwise ~ treatment)
 
-#comparison of V density between coculture and community | no difference if we leave outlier
+#comparison of V density between coculture and community
 V2.1cc <- lmer(Vlogperml~V_time*P_time*treatment+ (1|repP) + (1|repV),
                data = subset(timeshift, !(treatment %in% c('monoculture','ancestor'))))
 
@@ -321,7 +374,7 @@ vcount_full<-emmeans(V2.1cc, specs = pairwise ~ treatment)
 
 
 # =============================================================================
-# ANALYSIS of total density | no difference with outlier in
+# ANALYSIS of total density
 # =============================================================================
 
 density <-  lmer(log10(productivity) ~ P_time*V_time*treatment+ (1|repP) + (1|repV), data = (timeshift))
@@ -336,7 +389,7 @@ density <- update(density, ~ . - P_time:V_time) # no interaction
 drop1(density, test = 'Chisq')
 density <- update(density, ~ . - P_time) # no P_time effect
 drop1(density, test = 'Chisq')
-density <- update(density, ~ . - treatment) # no V_time effect
+density <- update(density, ~ . - treatment) # no treatment effect
 drop1(density, test = 'Chisq')
 # Model diagnostics using DHARMa residual analysis
 plot(simulateResiduals(fittedModel = density, plot = FALSE))
@@ -436,10 +489,32 @@ contemporaryplot_V <- ggplot(contemporaneous_interactions,
                    labels = function(x) sub(".","\n",x,fixed=TRUE)) +
   ggtitle("B) Variovorax") +
   theme_ze +
-  theme(legend.title = element_blank(), axis.text.x = element_text(angle = 45, hjust = 1)) 
+  theme(
+    legend.title = element_blank(),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title.y = element_blank()
+  )
 
-Fig2 <- contemporaryplot_P + contemporaryplot_V +
-  plot_layout(ncol = 2, nrow = 1, guides = 'collect') 
+contemporary_total <- ggplot(contemporaneous_interactions, 
+                             aes(x = V_time, y = log10(productivity*10^dilution/35))) +
+  geom_boxplot(aes(fill = treatment), 
+               outlier.shape = NA) +
+  geom_point(aes(fill = treatment), size = 2, alpha = 0.2, 
+             position = position_jitterdodge(jitter.width = 0.1)) +
+  scale_fill_moma_d(palette = "VanGogh")+ 
+  ylab(expression('density CFU/ml '(log[10]))) +
+  scale_x_discrete(name = NULL, 
+                   labels = function(x) sub(".","\n",x,fixed=TRUE)) +
+  ggtitle("C) Total density") +
+  theme_ze +
+    theme(
+    legend.title = element_blank(),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title.y = element_blank()
+  )
+
+Fig2 <- contemporaryplot_P + contemporaryplot_V + contemporary_total +
+  plot_layout(ncol = 3, nrow = 1, guides = 'collect') 
 Fig2
 ggsave("Fig2.pdf", height = 8, width = 10)
 ggsave("Fig2.tiff",
@@ -550,28 +625,27 @@ total_density <- time_long %>%
   mutate(log_density = log10(total_count * 10^dilution / 35),
          strain = "Pseudomonas+Variovorax")  # synthetic strain label for plotting
 
-Fig5 <- ggplot(subset(time_long, treatment %in% c('monoculture', 'coculture', 'community')), aes(x = V_time, y = log10(productivity*10^dilution/35)))+
-  geom_boxplot(aes(x=V_time, y=log10(count*10^dilution/35), fill=strain), outliers = F, alpha = 0.2)+
-  geom_boxplot(aes(fill = "Pseudomonas+Variovorax"), outliers = F, alpha = 0.8)+
-  geom_point(aes(x=V_time, y=log10(count*10^dilution/35), fill=strain), size = 2, alpha = 0.2, position = position_jitterdodge(jitter.width = 0.1))+
-  scale_fill_moma_d(palette = "VanGogh", 
-                    labels = c("Pseudomonas", "Pseudomonas+Variovorax", "Variovorax"))+
-  ylab(expression('density CFU/ml '(log[10])))+
-  scale_x_discrete(name = 'evolutionary time',labels=function(x) sub(".","\n",x,fixed=TRUE))+
-  theme_ze+
-  theme(legend.title=element_blank())+
-  facet_grid(~treatment, drop = TRUE,
-             labeller = labeller(treatment = c("monoculture" = "A) Monoculture", 
-                                               "coculture" = "B) Coculture", 
-                                               "community" = "C) Community"),
-                                 multi_line = TRUE))
-Fig5
-ggsave("Fig5.pdf", height = 8, width = 10)
-ggsave("Fig5.tiff",
-       width = 10,          # in inches
-       height = 8,         # in inches
-       dpi = 600,          # recommended for publication
-       units = "in",
-       compression = "lzw")  # lossless compression
-
+#Fig5 <- ggplot(subset(time_long, treatment %in% c('monoculture', 'coculture', 'community')), aes(x = V_time, y = log10(productivity*10^dilution/35)))+
+#  geom_boxplot(aes(x=V_time, y=log10(count*10^dilution/35), fill=strain), outliers = F, alpha = 0.2)+
+#  geom_boxplot(aes(fill = "Pseudomonas+Variovorax"), outliers = F, alpha = 0.8)+
+#  geom_point(aes(x=V_time, y=log10(count*10^dilution/35), fill=strain), size = 2, alpha = 0.2, position = position_jitterdodge(jitter.width = 0.1))+
+##  scale_fill_moma_d(palette = "VanGogh", 
+#                    labels = c("Pseudomonas", "Pseudomonas+Variovorax", "Variovorax"))+
+#  ylab(expression('density CFU/ml '(log[10])))+
+#  scale_x_discrete(name = 'evolutionary time',labels=function(x) sub(".","\n",x,fixed=TRUE))+
+# theme_ze+
+#  theme(legend.title=element_blank())+
+#  facet_grid(~treatment, drop = TRUE,
+#             labeller = labeller(treatment = c("monoculture" = "A) Monoculture", 
+#                                              "coculture" = "B) Coculture", 
+#                                               "community" = "C) Community"),
+#                                 multi_line = TRUE))
+#Fig5
+#ggsave("Fig5.pdf", height = 8, width = 10)
+#ggsave("Fig5.tiff",
+#      width = 10,          # in inches
+#       height = 8,         # in inches
+#       dpi = 600,          # recommended for publication
+#       units = "in",
+#       compression = "lzw")  # lossless compression
 
