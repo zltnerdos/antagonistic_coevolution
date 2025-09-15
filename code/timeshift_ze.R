@@ -474,6 +474,7 @@ contemporaryplot_P <- ggplot(contemporaneous_interactions,
   scale_x_discrete(name = NULL, 
                    labels = function(x) sub(".","\n",x,fixed=TRUE)) +
   ggtitle("A) Pseudomonas") +
+  ylim(c(4, 5.2)) +
   theme_ze +
   theme(legend.title = element_blank(), axis.text.x = element_text(angle = 45, hjust = 1))
 
@@ -488,11 +489,14 @@ contemporaryplot_V <- ggplot(contemporaneous_interactions,
   scale_x_discrete(name = NULL, 
                    labels = function(x) sub(".","\n",x,fixed=TRUE)) +
   ggtitle("B) Variovorax") +
+  ylim(c(4, 5.2)) +
   theme_ze +
   theme(
     legend.title = element_blank(),
     axis.text.x = element_text(angle = 45, hjust = 1),
-    axis.title.y = element_blank()
+    axis.title.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank(),
   )
 
 contemporary_total <- ggplot(contemporaneous_interactions, 
@@ -506,19 +510,22 @@ contemporary_total <- ggplot(contemporaneous_interactions,
   scale_x_discrete(name = NULL, 
                    labels = function(x) sub(".","\n",x,fixed=TRUE)) +
   ggtitle("C) Total density") +
+  ylim(c(4, 5.2)) + # adjust y-axis limits if needed
   theme_ze +
     theme(
     legend.title = element_blank(),
     axis.text.x = element_text(angle = 45, hjust = 1),
-    axis.title.y = element_blank()
+    axis.title.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank(),
   )
 
 Fig2 <- contemporaryplot_P + contemporaryplot_V + contemporary_total +
   plot_layout(ncol = 3, nrow = 1, guides = 'collect') 
 Fig2
-ggsave("Fig2.pdf", height = 8, width = 10)
+ggsave("Fig2.pdf", height = 8, width = 12)
 ggsave("Fig2.tiff",
-       width = 6,          # in inches
+       width = 10,          # in inches
        height = 6,         # in inches
        dpi = 600,          # recommended for publication
        units = "in",
