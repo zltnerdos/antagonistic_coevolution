@@ -1,6 +1,17 @@
-# =============================================================================
-# TIMESHIFT DATA ANALYSIS 
-# =============================================================================
+# ---------------------------
+# Purpose of script: Process and analyse colony count data from timeshift experiment for the journal article "Community complexity does not weaken pairwise coevolution in a soil bacterial community" (Ecology Letters)
+# This script is in addition to timeshift_ze.R. It runs the same process without excluding the outlier point 'VD4PC4'. The reason why this is a standalone script is that the model simplification is not automated, therefore model selection would be different if timeshift_ze were to be run on the dataset including 'VD4PC4'.
+# What this script does:
+# 1. Read in raw data from timeshift.csv
+# 2. Convert variables
+# 3. Visualise and remove outliers
+# 4. Statistical analysis of contemporaneous interactions, coevolution, and total density
+# 5. Visualise contemporaneous interactions, coevolution, and total density
+#
+# Author: Dr. Zoltan Erdos
+#
+# Date last modified:  2025-10-21
+# -------------------------
 
 # Load required packages
 # -----------------------------------------------------------------------------
@@ -22,13 +33,10 @@ theme_ze <-  theme_bw()+
         axis.text.y = element_text(size = 12))
 
 
-# import timeshift data
+#  import timeshift data
 # -----------------------------------------------------------------------------
-timeshift <- readxl::read_excel(
-  path = 'data/timeshift.xlsx', 
-  sheet = "Sheet1", 
-  col_names = TRUE
-)
+
+timeshift <- read.csv('data/timeshift.csv', header = T)
 
 # Data type conversions and factor level ordering
 # =============================================================================
@@ -44,7 +52,7 @@ timeshift$rep <- as.factor(timeshift$rep)
 timeshift$dilution <- as.numeric(timeshift$dilution)  # Dilution factor
 timeshift$P <- as.numeric(timeshift$P)                # P counts (raw)
 timeshift$V <- as.numeric(timeshift$V)                # V counts (raw)
-
+timeshift$productivity <- as.numeric(timeshift$productivity)
 # include random effect for P and V rep separately
 timeshift$repP <- interaction(timeshift$P_time, timeshift$rep)
 
@@ -284,14 +292,6 @@ prop_pcoculture <- glmer(cbind(P,V) ~ P_time*V_time+(1|repP) + (1|repV),
 
 drop1(prop_pcoculture, test = 'Chisq') # significant interaction
 
-prop_pcoculture <- update(prop_pcoculture, ~ . - P_time:V_time) # no interaction
-
-drop1(update(prop_pcoculture), test = "Chisq")
-
-prop_pcoculture <- update(prop_pcoculture, ~ . - V_time) # no V_time effect
-
-drop1(update(prop_pcoculture), test = "Chisq")
-
 plot(simulateResiduals(fittedModel = prop_pcoculture, plot = FALSE))
 
 summary(prop_pcoculture)
@@ -314,13 +314,8 @@ emmeans(prop_pcommunity, specs = pairwise ~ P_time | V_time)
 prop_p.1noa <-  glmer(cbind(P,V) ~ P_time*V_time*treatment+ (1|repP) + (1|repV),
                       data = subset(timeshift, !(treatment %in% c('monoculture','ancestor'))),
                       family = binomial)
-drop1(prop_p.1noa, test = 'Chisq') # no 3way interaction
-prop_p.1noa <- update(prop_p.1noa, ~ . - P_time:V_time:treatment)
-drop1(prop_p.1noa, test = 'Chisq')
-prop_p.1noa <- update(prop_p.1noa, ~ . - V_time:treatment) # no interaction
-drop1(prop_p.1noa, test = 'Chisq')
-prop_p.1noa <- update(prop_p.1noa, ~ . - P_time:treatment) # no interaction
-drop1(prop_p.1noa, test = 'Chisq')
+drop1(prop_p.1noa, test = 'Chisq') # 3way interaction
+
 # Model diagnostics using DHARMa residual analysis
 plot(simulateResiduals(fittedModel = prop_p.1noa, plot = FALSE))
 summary(prop_p.1noa)
@@ -352,10 +347,10 @@ P2.1cc <- update(P2.1cc, ~ . - V_time:P_time)
 drop1(update(P2.1cc, REML = 'F'), test = "Chisq")
 P2.1cc <- update(P2.1cc, ~ . - P_time) # no P_time effect
 drop1(update(P2.1cc, REML = 'F'), test = "Chisq")
-P2.1cc <- update(P2.1cc, ~ . - V_time) # no V_time effect
+P2.1cc <- update(P2.1cc, ~ . - treatment) # no treatment effect
 summary(P2.1cc)
 plot(simulateResiduals(fittedModel =P2.1cc, plot = F))
-pcount_full<-emmeans(P2.1cc, specs = pairwise ~ treatment)
+pcount_full<-emmeans(P2.1cc, specs = pairwise ~ V_time)
 
 #comparison of V density between coculture and community
 V2.1cc <- lmer(Vlogperml~V_time*P_time*treatment+ (1|repP) + (1|repV),
@@ -385,11 +380,11 @@ density <- update(density, ~ . - V_time:treatment) # no interaction
 drop1(density, test = 'Chisq')
 density <- update(density, ~ . - P_time:treatment) # no interaction
 drop1(density, test = 'Chisq')
-density <- update(density, ~ . - P_time:V_time) # no interaction
+density <- update(density, ~ . - treatment) # no treatment effect
+drop1(density, test = 'Chisq')
+density <- update(density, ~ . - P_time:V_time) # no P_time:V_time interaction
 drop1(density, test = 'Chisq')
 density <- update(density, ~ . - P_time) # no P_time effect
-drop1(density, test = 'Chisq')
-density <- update(density, ~ . - treatment) # no treatment effect
 drop1(density, test = 'Chisq')
 # Model diagnostics using DHARMa residual analysis
 plot(simulateResiduals(fittedModel = density, plot = FALSE))

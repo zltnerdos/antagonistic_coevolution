@@ -1,0 +1,19 @@
+﻿treatment,rep,dilution,P,V,density CFU/ml,density CFU/ml
+P_mono,2,5,37,NA,1.10E+08,NA
+P_mono,5,5,37,NA,1.10E+08,NA
+P_mono,6,5,24,NA,6.90E+07,NA
+P_mono,7,5,25,NA,7.10E+07,NA
+P_mono,8,5,32,NA,9.10E+07,NA
+V_mono,3,5,NA,39,NA,1.10E+08
+V_mono,5,5,NA,39,NA,1.10E+08
+V_mono,6,5,NA,39,NA,1.10E+08
+V_mono,7,5,NA,54,NA,1.50E+08
+V_mono,8,5,NA,42,NA,1.20E+08
+PV_co,1,5,33,21,9.40E+07,6.00E+07
+PV_co,2,5,27,18,7.70E+07,5.10E+07
+PV_co,3,5,19,26,5.40E+07,7.40E+07
+PV_co,4,5,25,24,7.10E+07,6.90E+07
+PV_co,5,5,22,36,6.30E+07,1.00E+08
+PV_co,6,5,26,20,7.40E+07,5.70E+07
+PV_co,7,5,15,20,4.30E+07,5.70E+07
+PV_co,8,5,20,21,5.70E+07,6.00E+07

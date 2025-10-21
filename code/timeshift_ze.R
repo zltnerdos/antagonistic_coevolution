@@ -1,6 +1,17 @@
-# =============================================================================
-# TIMESHIFT DATA ANALYSIS 
-# =============================================================================
+# ---------------------------
+# Purpose of script: Process and analyse colony count data from timeshift experiment for the journal article "Community complexity does not weaken pairwise coevolution in a soil bacterial community" (Ecology Letters)
+#
+# What this script does:
+# 1. Read in raw data from timeshift.csv
+# 2. Convert variables
+# 3. Visualise and remove outliers
+# 4. Statistical analysis of contemporaneous interactions, coevolution, and total density
+# 5. Visualise contemporaneous interactions, coevolution, and total density
+#
+# Author: Dr. Zoltan Erdos
+#
+# Date last modified:  2025-10-21
+# -------------------------
 
 # Load required packages
 # -----------------------------------------------------------------------------
@@ -24,11 +35,8 @@ theme_ze <-  theme_bw()+
 
 # import timeshift data
 # -----------------------------------------------------------------------------
-timeshift <- readxl::read_excel(
-  path = 'data/timeshift.xlsx', 
-  sheet = "Sheet1", 
-  col_names = TRUE
-)
+
+timeshift <- read.csv('data/timeshift.csv', header = T)
 
 # Data type conversions and factor level ordering
 # =============================================================================
@@ -44,7 +52,7 @@ timeshift$rep <- as.factor(timeshift$rep)
 timeshift$dilution <- as.numeric(timeshift$dilution)  # Dilution factor
 timeshift$P <- as.numeric(timeshift$P)                # P counts (raw)
 timeshift$V <- as.numeric(timeshift$V)                # V counts (raw)
-
+timeshift$productivity <- as.numeric(timeshift$productivity)
 # include random effect for P and V rep separately
 timeshift$repP <- interaction(timeshift$P_time, timeshift$rep)
 

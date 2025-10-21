@@ -1,0 +1,13 @@
+community	individual replicate ID
+treatment	treatment ID
+P_time	evolutionary time of Pseudomonas
+V_time	evolutionary time of Variovorax
+rep	replicate number within treatment
+dilution	"dilution factor, value in cell represents the exponent component of base 10"
+P	colony forming units (CFUs) of Pseudomonas
+V	colony forming units (CFUs) of Variovorax
+V_prop	proportion of Variovorax calculated as V density / (P density+ V density)
+P_prop	proportion of Pseudomonas calculated as P density / (P density + V density)
+P_density	Pseudomonas density in CFU/ml
+V_density	Variovorax density in CFU/ml
+productivity	Combined total of Pseudomonas and Variovorax CFUs (calculated as Pseudomonas CFU + Variovorax CFU in a community)
